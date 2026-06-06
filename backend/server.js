@@ -84,5 +84,115 @@ app.post('/chat', async (req, res) => {
     res.status(500).json({ error: 'Something went wrong' });
   }
 });
+// postgressssssss
 
+const pool = require('./db');
+
+// Get available rooms
+app.get('/rooms/available', async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM rooms WHERE status = 'available' ORDER BY room_type"
+    );
+    res.json({ rooms: result.rows });
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get rooms by type
+app.get('/rooms/:type', async (req, res) => {
+  try {
+    const { type } = req.params;
+    const result = await pool.query(
+      "SELECT * FROM rooms WHERE LOWER(room_type) = LOWER($1) AND status = 'available'",
+      [type]
+    );
+    res.json({ rooms: result.rows });
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Ai to database
+// AI powered room search
+app.post('/rooms/search', async (req, res) => {
+  const { message } = req.body;
+
+  try {
+    // Get all available rooms from database
+    const result = await pool.query(
+      "SELECT * FROM rooms WHERE status = 'available' ORDER BY room_type"
+    );
+    const rooms = result.rows;
+
+    // Send to Groq with real database results
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful hotel assistant for The Grand Hotel.
+You have access to real-time room availability data.
+Answer the guest's question based on the room data provided.
+Always mention room numbers, prices and availability.
+Be friendly and helpful.
+
+AVAILABLE ROOMS DATA:
+${JSON.stringify(rooms, null, 2)}`
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ],
+      max_tokens: 1024,
+    });
+
+    res.json({ 
+      reply: response.choices[0].message.content,
+      rooms: rooms 
+    });
+
+  } catch (error) {
+    console.error('Error:', error.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// agentic Ai 
+const { runAgent } = require('./agent');
+
+// Store conversation history (in memory for now)
+const conversations = {};
+
+app.post('/agent/chat', async (req, res) => {
+  const { message, session_id } = req.body;
+
+  if (!message || !session_id) {
+    return res.status(400).json({ error: 'Message and session_id required' });
+  }
+
+  // Get or create conversation history
+  if (!conversations[session_id]) {
+    conversations[session_id] = [];
+  }
+
+  // Add user message to history
+  conversations[session_id].push({ role: 'user', content: message });
+
+  try {
+    const result = await runAgent(conversations[session_id]);
+
+    // Add AI response to history
+    conversations[session_id].push({ role: 'assistant', content: result.reply });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Agent error:', error.message);
+    res.status(500).json({ error: 'Agent error' });
+  }
+});
 app.listen(5000, () => console.log('Server running on http://localhost:5000'));

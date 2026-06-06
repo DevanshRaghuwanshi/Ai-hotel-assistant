@@ -17,8 +17,10 @@ const styles = {
 };
 
 const SUGGESTIONS = [
-  'What is check-in time?', 'Do you allow pets?',
-  'Is breakfast included?', 'What rooms are available?'
+  'I want to book a deluxe room',
+  'What is the cancellation policy?',
+  'Show available rooms',
+  'Is breakfast included?'
 ];
 
 export default function App() {
@@ -31,26 +33,29 @@ export default function App() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  const sendMessage = async (text) => {
-    const userMsg = text || input.trim();
-    if (!userMsg) return;
-    setMessages(m => [...m, { role: 'user', text: userMsg }]);
-    setInput('');
-    setLoading(true);
+const sendMessage = async (text) => {
+  const userMsg = text || input.trim();
+  if (!userMsg) return;
+  setMessages(m => [...m, { role: 'user', text: userMsg }]);
+  setInput('');
+  setLoading(true);
 
-    try {
-      const res = await fetch('http://127.0.0.1:5001/rag-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg }),
-      });
-      const data = await res.json();
-      setMessages(m => [...m, { role: 'bot', text: data.reply || 'Sorry, something went wrong.' }]);
-    } catch {
-      setMessages(m => [...m, { role: 'bot', text: 'Network error. Is the backend running?' }]);
-    }
-    setLoading(false);
-  };
+  try {
+    const res = await fetch('http://localhost:5000/agent/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: userMsg,
+        session_id: 'user_001'
+      }),
+    });
+    const data = await res.json();
+    setMessages(m => [...m, { role: 'bot', text: data.reply }]);
+  } catch {
+    setMessages(m => [...m, { role: 'bot', text: 'Network error. Are both servers running?' }]);
+  }
+  setLoading(false);
+};
 
   return (
     <div style={styles.app}>

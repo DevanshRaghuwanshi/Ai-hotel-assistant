@@ -2,3 +2,4 @@
 node_modules/
 rag/venv/
 rag/chroma_db/
+rag/.env
