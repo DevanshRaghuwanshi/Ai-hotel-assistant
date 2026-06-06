@@ -1,0 +1,29 @@
+GRAND HOTEL - ROOM TYPES
+
+Standard Room:
+- Price: Rs.3,500 per night
+- Bed: 1 double bed
+- View: City view
+- Max guests: 2
+- Amenities: AC, TV, minibar, safe, hair dryer
+
+Deluxe Room:
+- Price: Rs.5,500 per night
+- Bed: 1 king bed
+- View: City view
+- Max guests: 2
+- Amenities: AC, TV, minibar, safe, hair dryer, bathtub
+
+Family Room:
+- Price: Rs.7,000 per night
+- Bed: 2 double beds
+- View: City view
+- Max guests: 4
+- Amenities: AC, TV, minibar, safe, hair dryer
+
+Suite:
+- Price: Rs.9,000 per night
+- Bed: 1 king bed
+- View: Sea view
+- Max guests: 2
+- Amenities: AC, TV, minibar, safe, hair dryer, jacuzzi, separate living area
