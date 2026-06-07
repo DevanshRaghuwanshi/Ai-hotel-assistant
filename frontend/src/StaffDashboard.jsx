@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export default function StaffDashboard() {
   const [rooms, setRooms] = useState([]);
@@ -10,7 +11,10 @@ export default function StaffDashboard() {
 
   const fetchRooms = async () => {
     try {
-      const res = await fetch("http://localhost:5000/rooms/all");
+      const token = localStorage.getItem('token');
+const res = await fetch("http://localhost:5000/rooms/all", {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
       const data = await res.json();
       setRooms(data.rooms);
     } catch (error) {
@@ -54,6 +58,9 @@ export default function StaffDashboard() {
         >
           Refresh
         </button>
+<Link to="/bookings" style={{ padding: "8px 16px", background: "#f9f9f9", color: "#1a1a1a", border: "1px solid #e5e5e5", borderRadius: "8px", cursor: "pointer", fontSize: "13px", textDecoration: "none" }}>
+  Booking History
+</Link>
       </div>
 
       {/* Stats */}
@@ -154,9 +161,9 @@ export default function StaffDashboard() {
 
       {/* Back to chatbot */}
       <div style={{ marginTop: "24px", textAlign: "center" }}>
-        <a href="/" style={{ color: "#888", fontSize: "13px", textDecoration: "none" }}>
-          ← Back to Guest Chatbot
-        </a>
+<Link to="/" style={{ color: "#888", fontSize: "13px", textDecoration: "none" }}>
+  ← Back to PMS
+</Link>
       </div>
     </div>
   );

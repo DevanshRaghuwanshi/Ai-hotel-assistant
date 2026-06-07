@@ -42,15 +42,63 @@ const result = await pool.query(`
     AND next_res.check_in_date > CURRENT_DATE
   ORDER BY r.room_number
 `);
-res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
-res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
-    res.json({ rooms: result.rows });
+ res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
   } catch (error) {
     console.error('Database error:', error.message);
     res.status(500).json({ error: 'Database error' });
   }
 });
+//booking history
+router.get('/bookings', async (req, res) => {
+  try {
+    const { name, email, date } = req.query;
+    
+    let query = `
+      SELECT 
+        r.id as reservation_id,
+        g.full_name as guest_name,
+        g.email,
+        g.phone,
+        rm.room_number,
+        rm.room_type,
+        r.check_in_date,
+        r.check_out_date,
+        r.num_guests,
+        r.total_amount,
+        r.status,
+        r.created_at
+      FROM reservations r
+      JOIN guests g ON r.guest_id = g.id
+      JOIN rooms rm ON r.room_id = rm.id
+      WHERE 1=1
+    `;
+    
+    const params = [];
 
+    if (name) {
+      params.push(`%${name}%`);
+      query += ` AND LOWER(g.full_name) LIKE LOWER($${params.length})`;
+    }
+
+    if (email) {
+      params.push(`%${email}%`);
+      query += ` AND LOWER(g.email) LIKE LOWER($${params.length})`;
+    }
+
+    if (date) {
+      params.push(date);
+      query += ` AND (r.check_in_date = $${params.length} OR r.check_out_date = $${params.length})`;
+    }
+
+    query += ` ORDER BY r.created_at DESC`;
+
+    const result = await pool.query(query, params);
+    res.json({ bookings: result.rows });
+  } catch (error) {
+    console.error('Database error:', error.message);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
 // Get rooms by type
 router.get('/:type', async (req, res) => {
   try {
@@ -102,5 +150,7 @@ ${JSON.stringify(rooms, null, 2)}`
     res.status(500).json({ error: 'Something went wrong' });
   }
 });
+
+
 
 module.exports = router;
