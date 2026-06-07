@@ -22,18 +22,28 @@ router.get('/available', async (req, res) => {
 // Get all rooms with full status (for staff dashboard)
 router.get('/all', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT r.*, 
-        res.check_in_date, res.check_out_date,
-        g.full_name as guest_name, g.phone as guest_phone
-      FROM rooms r
-      LEFT JOIN reservations res ON r.id = res.room_id 
-        AND res.status = 'confirmed'
-        AND res.check_in_date <= CURRENT_DATE 
-        AND res.check_out_date > CURRENT_DATE
-      LEFT JOIN guests g ON res.guest_id = g.id
-      ORDER BY r.room_number
-    `);
+const result = await pool.query(`
+  SELECT r.*,
+    curr.check_in_date, curr.check_out_date,
+    g.full_name as guest_name, g.phone as guest_phone,
+    next_res.check_in_date as next_check_in,
+    CASE 
+      WHEN curr.id IS NOT NULL THEN 'occupied'
+      ELSE 'available'
+    END as dynamic_status
+  FROM rooms r
+  LEFT JOIN reservations curr ON r.id = curr.room_id 
+    AND curr.status = 'confirmed'
+    AND curr.check_in_date <= CURRENT_DATE 
+    AND curr.check_out_date > CURRENT_DATE
+  LEFT JOIN guests g ON curr.guest_id = g.id
+  LEFT JOIN reservations next_res ON r.id = next_res.room_id
+    AND next_res.status = 'confirmed'
+    AND next_res.check_in_date > CURRENT_DATE
+  ORDER BY r.room_number
+`);
+res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
+res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
     res.json({ rooms: result.rows });
   } catch (error) {
     console.error('Database error:', error.message);
