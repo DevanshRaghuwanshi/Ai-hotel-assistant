@@ -4,62 +4,7 @@ require('dotenv').config();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Tool definitions - these are actions the AI can take
-const tools = [
-  {
-    type: 'function',
-    function: {
-      name: 'check_room_availability',
-      description: 'Check if rooms of a specific type are available',
-      parameters: {
-        type: 'object',
-        properties: {
-          room_type: {
-            type: 'string',
-            description: 'Type of room: Standard, Deluxe, Family, or Suite'
-          }
-        },
-        required: ['room_type']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'create_reservation',
-      description: 'Create a hotel reservation for a guest',
-      parameters: {
-        type: 'object',
-        properties: {
-          full_name: { type: 'string', description: 'Guest full name' },
-          email: { type: 'string', description: 'Guest email address' },
-          phone: { type: 'string', description: 'Guest phone number' },
-          id_proof_type: { type: 'string', description: 'Type of ID: Aadhar, Passport, or Driving License' },
-          id_proof_number: { type: 'string', description: 'ID proof number' },
-          room_type: { type: 'string', description: 'Type of room to book' },
-          check_in_date: { type: 'string', description: 'Check-in date in YYYY-MM-DD format' },
-          check_out_date: { type: 'string', description: 'Check-out date in YYYY-MM-DD format' },
-          num_guests: { type: 'number', description: 'Number of guests' }
-        },
-        required: ['full_name', 'email', 'phone', 'id_proof_type', 'id_proof_number', 'room_type', 'check_in_date', 'check_out_date', 'num_guests']
-      }
-    }
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'get_reservation',
-      description: 'Get reservation details by guest email',
-      parameters: {
-        type: 'object',
-        properties: {
-          email: { type: 'string', description: 'Guest email address' }
-        },
-        required: ['email']
-      }
-    }
-  }
-];
+
 
 // Tool execution - this is where AI decisions become real actions
 async function executeTool(toolName, toolArgs) {
@@ -77,6 +22,7 @@ async function executeTool(toolName, toolArgs) {
   }
 
   if (toolName === 'create_reservation') {
+    toolArgs.num_guests = parseInt(toolArgs.num_guests);
     // Find available room of requested type
     const roomResult = await pool.query(
       "SELECT * FROM rooms WHERE LOWER(room_type) = LOWER($1) AND status = 'available' LIMIT 1",
@@ -159,30 +105,30 @@ async function executeTool(toolName, toolArgs) {
 
 // Main agent function
 async function runAgent(conversationHistory) {
-  const systemPrompt = `You are a helpful booking assistant for The Grand Hotel, Mumbai.
+  const systemPrompt = `You are a booking assistant for The Grand Hotel, Mumbai.
+Today's date is ${new Date().toISOString().split('T')[0]}.
 
-You have access to these tools:
-- check_room_availability: Check if rooms are available
-- create_reservation: Book a room for a guest
-- get_reservation: Look up existing reservation
+When a guest wants to book a room, collect these details one by one:
+- full_name
+- email
+- phone
+- id_proof_type (Aadhar, Passport, or Driving License)
+- id_proof_number
+- room_type (Standard, Deluxe, Family, Suite)
+- check_in_date (YYYY-MM-DD)
+- check_out_date (YYYY-MM-DD)
+- num_guests (number)
 
-When a guest wants to book a room:
-1. Check availability first
-2. Collect all required information naturally through conversation:
-   - Full name
-   - Email
-   - Phone number
-   - ID proof type (Aadhar/Passport/Driving License)
-   - ID proof number
-   - Check-in date
-   - Check-out date
-   - Number of guests
-3. Confirm all details before creating reservation
-4. Create the reservation and confirm with booking details
+When you have ALL details, respond with ONLY this JSON and nothing else:
+{"action": "create_reservation", "full_name": "...", "email": "...", "phone": "...", "id_proof_type": "...", "id_proof_number": "...", "room_type": "...", "check_in_date": "...", "check_out_date": "...", "num_guests": 1}
 
-For dates, today is ${new Date().toISOString().split('T')[0]}.
-Always be polite, professional and helpful.
-If guest asks about their booking, use get_reservation tool.`;
+For availability questions respond with:
+{"action": "check_availability", "room_type": "..."}
+
+For looking up bookings respond with:
+{"action": "get_reservation", "email": "..."}
+
+For general questions just answer normally in plain text.`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
@@ -192,45 +138,54 @@ If guest asks about their booking, use get_reservation tool.`;
   const response = await groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: messages,
-    tools: tools,
-    tool_choice: 'auto',
     max_tokens: 1024,
   });
 
-  const message = response.choices[0].message;
+  const content = response.choices[0].message.content.trim();
 
-  // If AI wants to use a tool
-  if (message.tool_calls && message.tool_calls.length > 0) {
-    const toolCall = message.tool_calls[0];
-    const toolName = toolCall.function.name;
-    const toolArgs = JSON.parse(toolCall.function.arguments);
+  // Try to parse as JSON action
+  try {
+    const parsed = JSON.parse(content);
 
-    // Execute the tool
-    const toolResult = await executeTool(toolName, toolArgs);
+    if (parsed.action === 'create_reservation') {
+      parsed.num_guests = parseInt(parsed.num_guests);
+      const result = await executeTool('create_reservation', parsed);
+      if (result.success) {
+        return {
+          reply: `Booking confirmed! Here are your details:\n- Reservation ID: ${result.reservation_id}\n- Guest: ${result.guest_name}\n- Room: ${result.room_number} (${result.room_type})\n- Check-in: ${result.check_in}\n- Check-out: ${result.check_out}\n- Nights: ${result.nights}\n- Total: ₹${result.total_amount}\n\nWe look forward to welcoming you at The Grand Hotel!`,
+          tool_used: 'create_reservation',
+          tool_result: result
+        };
+      } else {
+        return { reply: `Sorry, ${result.message}. Please try a different room type.` };
+      }
+    }
 
-    // Send tool result back to AI
-    const finalResponse = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        ...messages,
-        message,
-        {
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(toolResult)
-        }
-      ],
-      max_tokens: 1024,
-    });
+    if (parsed.action === 'check_availability') {
+      const result = await executeTool('check_room_availability', { room_type: parsed.room_type });
+      if (result.available) {
+        const roomList = result.rooms.map(r => `Room ${r.room_number} - ₹${r.price_per_night}/night`).join('\n');
+        return { reply: `We have ${result.count} ${parsed.room_type} room(s) available:\n${roomList}` };
+      } else {
+        return { reply: `Sorry, no ${parsed.room_type} rooms are available right now.` };
+      }
+    }
 
-    return {
-      reply: finalResponse.choices[0].message.content,
-      tool_used: toolName,
-      tool_result: toolResult
-    };
+    if (parsed.action === 'get_reservation') {
+      const result = await executeTool('get_reservation', { email: parsed.email });
+      if (result.found) {
+        const r = result.reservation;
+        return { reply: `Found your reservation:\n- Room: ${r.room_number} (${r.room_type})\n- Check-in: ${r.check_in_date}\n- Check-out: ${r.check_out_date}\n- Status: ${r.status}\n- Total: ₹${r.total_amount}` };
+      } else {
+        return { reply: 'No reservation found for that email.' };
+      }
+    }
+
+  } catch (e) {
+    // Not JSON — just a normal text response
   }
 
-  return { reply: message.content };
+  return { reply: content };
 }
 
 module.exports = { runAgent };
