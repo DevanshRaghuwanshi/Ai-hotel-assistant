@@ -8,7 +8,7 @@ app.use(express.json());
 
 const authenticateHotel = require('./middleware/auth');
 
-
+app.use('/payment', authenticateHotel, require('./routes/payment'));
 app.use('/documents', authenticateHotel, require('./routes/documents'));
 app.use('/chat', require('./routes/chat'));
 app.use('/rooms', authenticateHotel, require('./routes/rooms'));

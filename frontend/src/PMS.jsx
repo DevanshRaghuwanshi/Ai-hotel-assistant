@@ -94,6 +94,7 @@ export default function PMS() {
             { href: "/staff", emoji: "🏨", title: "Staff Dashboard", desc: "Real-time room status. See available, occupied rooms and upcoming bookings at a glance.", btn: "View Rooms" },
             { href: "/bookings", emoji: "📋", title: "Booking History", desc: "View all reservations. Filter by guest name, email, or date. Track booking status.", btn: "View Bookings" },
             { href: "/admin", emoji: "⚙️", title: "Admin Panel", desc: "Manage rooms, upload documents, view your embed code.", btn: "Open Admin" },
+            { href: "/pricing", emoji: "💳", title: "Upgrade Plan", desc: "View your current plan and upgrade to unlock more features.", btn: "View Plans" },
           ].map(card => (
             <Link key={card.href} to={card.href} style={{ textDecoration: "none" }}>
               <div

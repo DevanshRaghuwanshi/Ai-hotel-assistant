@@ -44,7 +44,7 @@ export default function Auth() {
       localStorage.setItem('hotel', JSON.stringify(data.hotel));
 
       // Redirect to PMS
-      navigate('/');
+      navigate('/dashboard');
 
     } catch (err) {
       setError('Network error. Is the server running?');
