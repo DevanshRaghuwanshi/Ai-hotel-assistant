@@ -6,6 +6,7 @@ import App from './App.jsx'
 import StaffDashboard from './StaffDashboard.jsx'
 import BookingHistory from './BookingHistory.jsx'
 import Auth from './Auth.jsx'
+import Admin from './Admin.jsx'
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/chat" element={<App />} />
         <Route path="/staff" element={<ProtectedRoute><StaffDashboard /></ProtectedRoute>} />
         <Route path="/bookings" element={<ProtectedRoute><BookingHistory /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

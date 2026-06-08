@@ -93,6 +93,7 @@ export default function PMS() {
             { href: "/chat", emoji: "🤖", title: "AI Concierge", desc: "Guest chatbot powered by AI. Answers questions, handles bookings, checks availability.", btn: "Open Chatbot" },
             { href: "/staff", emoji: "🏨", title: "Staff Dashboard", desc: "Real-time room status. See available, occupied rooms and upcoming bookings at a glance.", btn: "View Rooms" },
             { href: "/bookings", emoji: "📋", title: "Booking History", desc: "View all reservations. Filter by guest name, email, or date. Track booking status.", btn: "View Bookings" },
+            { href: "/admin", emoji: "⚙️", title: "Admin Panel", desc: "Manage rooms, upload documents, view your embed code.", btn: "Open Admin" },
           ].map(card => (
             <Link key={card.href} to={card.href} style={{ textDecoration: "none" }}>
               <div

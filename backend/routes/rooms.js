@@ -99,6 +99,40 @@ router.get('/bookings', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   }
 });
+//add rooms by admin
+
+router.post('/add', async (req, res) => {
+  console.log('req.hotel:', req.hotel);
+  console.log('req.body:', req.body);
+
+  const { room_number, room_type, price_per_night, max_guests, description } = req.body;
+  const hotel_id = req.hotel?.hotel_id;
+
+  if (!room_number || !price_per_night) {
+    return res.status(400).json({ error: 'Room number and price required' });
+  }
+
+  try {
+    const existing = await pool.query(
+      'SELECT * FROM rooms WHERE room_number = $1 AND hotel_id = $2',
+      [room_number, hotel_id]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'Room number already exists' });
+    }
+
+    const result = await pool.query(
+      'INSERT INTO rooms (room_number, room_type, price_per_night, max_guests, description, status, hotel_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [room_number, room_type, price_per_night, max_guests, description, 'available', hotel_id]
+    );
+
+    res.json({ room: result.rows[0] });
+  } catch (error) {
+    console.error('Error adding room:', error.message);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
 // Get rooms by type
 router.get('/:type', async (req, res) => {
   try {
@@ -150,7 +184,6 @@ ${JSON.stringify(rooms, null, 2)}`
     res.status(500).json({ error: 'Something went wrong' });
   }
 });
-
 
 
 module.exports = router;
