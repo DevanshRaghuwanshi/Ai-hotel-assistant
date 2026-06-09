@@ -23,6 +23,33 @@ async function executeTool(toolName, toolArgs) {
 
   if (toolName === 'create_reservation') {
     toolArgs.num_guests = parseInt(toolArgs.num_guests);
+      // Validate all required fields
+  if (!toolArgs.full_name || toolArgs.full_name.trim() === '') {
+    return { success: false, message: 'Guest name is required' };
+  }
+  if (!toolArgs.email || !toolArgs.email.includes('@')) {
+    return { success: false, message: 'Valid email is required' };
+  }
+  if (!toolArgs.phone) {
+    return { success: false, message: 'Phone number is required' };
+  }
+  if (!toolArgs.id_proof_number) {
+    return { success: false, message: 'ID proof is required' };
+  }
+
+  // Check for duplicate reservation
+  const duplicate = await pool.query(
+    `SELECT * FROM reservations r 
+     JOIN guests g ON r.guest_id = g.id 
+     WHERE g.email = $1 
+     AND r.check_in_date = $2 
+     AND r.status = 'confirmed'`,
+    [toolArgs.email, toolArgs.check_in_date]
+  );
+
+  if (duplicate.rows.length > 0) {
+    return { success: false, message: 'A reservation already exists for this guest on this date' };
+  }
     // Find available room of requested type
     const roomResult = await pool.query(
       "SELECT * FROM rooms WHERE LOWER(room_type) = LOWER($1) AND status = 'available' LIMIT 1",
@@ -51,17 +78,17 @@ async function executeTool(toolName, toolArgs) {
     if (existingGuest.rows.length > 0) {
       guest = existingGuest.rows[0];
     } else {
-      const newGuest = await pool.query(
-        'INSERT INTO guests (full_name, email, phone, id_proof_type, id_proof_number) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [toolArgs.full_name, toolArgs.email, toolArgs.phone, toolArgs.id_proof_type, toolArgs.id_proof_number]
-      );
+const newGuest = await pool.query(
+  'INSERT INTO guests (full_name, email, phone, id_proof_type, id_proof_number, hotel_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+  [toolArgs.full_name, toolArgs.email, toolArgs.phone, toolArgs.id_proof_type, toolArgs.id_proof_number, toolArgs.hotel_id]
+);
       guest = newGuest.rows[0];
     }
 
     // Create reservation
-    const reservation = await pool.query(
-      'INSERT INTO reservations (guest_id, room_id, check_in_date, check_out_date, num_guests, total_amount, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [guest.id, room.id, toolArgs.check_in_date, toolArgs.check_out_date, toolArgs.num_guests, totalAmount, 'confirmed']
+const reservation = await pool.query(
+      'INSERT INTO reservations (guest_id, room_id, check_in_date, check_out_date, num_guests, total_amount, status, hotel_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+      [guest.id, room.id, toolArgs.check_in_date, toolArgs.check_out_date, toolArgs.num_guests, totalAmount, 'confirmed', toolArgs.hotel_id]
     );
 
     // Mark room as occupied
@@ -104,7 +131,7 @@ async function executeTool(toolName, toolArgs) {
 }
 
 // Main agent function
-async function runAgent(conversationHistory) {
+async function runAgent(conversationHistory, hotel_id) {
   const systemPrompt = `You are a booking assistant for The Grand Hotel, Mumbai.
 Today's date is ${new Date().toISOString().split('T')[0]}.
 
@@ -127,6 +154,8 @@ For availability questions respond with:
 
 For looking up bookings respond with:
 {"action": "get_reservation", "email": "..."}
+- NEVER call create_reservation if full_name is empty or missing
+- NEVER call create_reservation twice for the same guest
 
 For general questions just answer normally in plain text.`;
 
@@ -149,6 +178,7 @@ For general questions just answer normally in plain text.`;
 
     if (parsed.action === 'create_reservation') {
       parsed.num_guests = parseInt(parsed.num_guests);
+      parsed.hotel_id = hotel_id;
       const result = await executeTool('create_reservation', parsed);
       if (result.success) {
         return {

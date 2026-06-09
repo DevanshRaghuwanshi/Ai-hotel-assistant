@@ -23,27 +23,32 @@ router.get('/available', async (req, res) => {
 router.get('/all', async (req, res) => {
   try {
     const hotel_id = req.hotel?.hotel_id;
-    const result = await pool.query(`
-      SELECT r.*,
-        curr.check_in_date, curr.check_out_date,
-        g.full_name as guest_name, g.phone as guest_phone,
-        next_res.check_in_date as next_check_in,
-        CASE 
-          WHEN curr.id IS NOT NULL THEN 'occupied'
-          ELSE 'available'
-        END as dynamic_status
-      FROM rooms r
-      LEFT JOIN reservations curr ON r.id = curr.room_id 
-        AND curr.status = 'confirmed'
-        AND curr.check_in_date <= CURRENT_DATE 
-        AND curr.check_out_date > CURRENT_DATE
-      LEFT JOIN guests g ON curr.guest_id = g.id
-      LEFT JOIN reservations next_res ON r.id = next_res.room_id
-        AND next_res.status = 'confirmed'
-        AND next_res.check_in_date > CURRENT_DATE
-      WHERE r.hotel_id = $1
-      ORDER BY r.room_number
-    `, [hotel_id]);
+const result = await pool.query(`
+  SELECT r.*,
+    curr.check_in_date, curr.check_out_date,
+    g.full_name as guest_name, g.phone as guest_phone,
+    next_res.check_in_date as next_check_in,
+    CASE 
+      WHEN curr.id IS NOT NULL THEN 'occupied'
+      ELSE 'available'
+    END as dynamic_status
+  FROM rooms r
+  LEFT JOIN reservations curr ON r.id = curr.room_id 
+    AND curr.status = 'confirmed'
+    AND curr.check_in_date <= CURRENT_DATE 
+    AND curr.check_out_date > CURRENT_DATE
+  LEFT JOIN guests g ON curr.guest_id = g.id
+  LEFT JOIN LATERAL (
+    SELECT check_in_date FROM reservations 
+    WHERE room_id = r.id
+    AND status = 'confirmed'
+    AND check_in_date > CURRENT_DATE
+    ORDER BY check_in_date ASC
+    LIMIT 1
+  ) next_res ON true
+  WHERE r.hotel_id = $1
+  ORDER BY r.room_number
+`, [hotel_id]);
     res.json({ rooms: result.rows.map(r => ({...r, status: r.dynamic_status})) });
   } catch (error) {
     console.error('Database error:', error.message);

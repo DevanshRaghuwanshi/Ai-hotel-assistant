@@ -18,7 +18,8 @@ router.post('/chat', async (req, res) => {
   conversations[session_id].push({ role: 'user', content: message });
 
   try {
-    const result = await runAgent(conversations[session_id]);
+    const hotel_id = req.hotel?.hotel_id;
+    const result = await runAgent(conversations[session_id], hotel_id);
     conversations[session_id].push({ role: 'assistant', content: result.reply });
     res.json(result);
   } catch (error) {
