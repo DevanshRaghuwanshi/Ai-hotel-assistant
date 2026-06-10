@@ -134,7 +134,6 @@ export default function Pricing() {
           <div style={{ color: "#fff", fontSize: "18px", fontWeight: "700" }}>Upgrade Plan</div>
           <div style={{ color: "#888", fontSize: "12px" }}>{hotel.hotel_name}</div>
         </div>
-        <Link to="/dashboard" style={{ color: "#888", fontSize: "13px", textDecoration: "none" }}>← Back to Dashboard</Link>
       </div>
 
       <div style={{ maxWidth: "1000px", margin: "60px auto", padding: "0 24px" }}>

@@ -22,10 +22,10 @@ const SUGGESTIONS = [
   'Show available rooms',
   'Is breakfast included?'
 ];
-
+const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
 export default function App() {
   const [messages, setMessages] = useState([
-    { role: 'bot', text: 'Hello! Welcome to The Grand Hotel 🏨 How can I help you today?' }
+    { role: 'bot', text:  `Hello! Welcome to ${hotel.hotel_name || "Hotel"} 🏨 How can I help you today?` }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,16 +39,27 @@ const sendMessage = async (text) => {
   setMessages(m => [...m, { role: 'user', text: userMsg }]);
   setInput('');
   setLoading(true);
+    const token = localStorage.getItem('token');
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  };
+
 
   try {
-    const res = await fetch('http://localhost:5000/agent/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        message: userMsg,
-        session_id: 'user_001'
-      }),
-    });
+    const isBookingQuery = userMsg.toLowerCase().includes('book') ||
+      userMsg.toLowerCase().includes('reservation') ||
+      userMsg.toLowerCase().includes('reserve');
+
+    const endpoint = isBookingQuery
+      ? 'http://localhost:5000/agent/chat'
+      : 'http://localhost:5000/chat';
+
+    const body = isBookingQuery
+      ? JSON.stringify({ message: userMsg, session_id: 'user_001' })
+      : JSON.stringify({ message: userMsg });
+
+    const res = await fetch(endpoint, { method: 'POST', headers, body });
     const data = await res.json();
     setMessages(m => [...m, { role: 'bot', text: data.reply }]);
   } catch {
@@ -56,11 +67,10 @@ const sendMessage = async (text) => {
   }
   setLoading(false);
 };
-
   return (
     <div style={styles.app}>
       <div style={styles.header}>
-        <div style={styles.title}>The Grand Hotel</div>
+        <div style={styles.title}>{hotel?.hotel_name || 'Hotel'}</div>
         <div style={styles.subtitle}>AI Concierge — available 24/7</div>
       </div>
       <div style={styles.chatBox}>

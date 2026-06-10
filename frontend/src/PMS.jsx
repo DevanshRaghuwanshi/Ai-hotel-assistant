@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link ,useNavigate} from "react-router-dom";
 
+const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
 function QuickStats() {
   const [stats, setStats] = useState({ total: 0, available: 0, occupied: 0, bookings: 0 });
 
@@ -59,19 +60,13 @@ export default function PMS() {
       {/* Header */}
       <div style={{ background: "#1a1a1a", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <div style={{ color: "#fff", fontSize: "20px", fontWeight: "700" }}>The Grand Hotel</div>
+          <div style={{ color: "#fff", fontSize: "20px", fontWeight: "700" }}>{hotel.hotel_name || "Hotel"}</div>
           <div style={{ color: "#888", fontSize: "12px", marginTop: "2px" }}>Property Management System</div>
         </div>
 <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
           <div style={{ color: "#888", fontSize: "12px" }}>
             {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </div>
-          <div style={{ color: "#fff", fontSize: "12px", fontWeight: "600" }}>
-            {hotel.hotel_name}
-          </div>
-          <button onClick={logout} style={{ padding: "6px 14px", background: "transparent", color: "#888", border: "1px solid #444", borderRadius: "8px", cursor: "pointer", fontSize: "12px" }}>
-            Logout
-          </button>
         </div>
       </div>
 
@@ -80,7 +75,7 @@ export default function PMS() {
 
         <div style={{ textAlign: "center", marginBottom: "48px" }}>
           <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#1a1a1a", margin: "0 0 8px" }}>
-            Welcome to Grand Hotel PMS
+            Welcome to {hotel.hotel_name || "Hotel"} PMS
           </h1>
           <p style={{ color: "#888", fontSize: "15px", margin: 0 }}>
             Manage your property with AI-powered tools

@@ -59,7 +59,7 @@ const result = await pool.query(`
 router.get('/bookings', async (req, res) => {
   try {
     const hotel_id = req.hotel?.hotel_id;
-    const { name, email, date } = req.query;
+    const { name, email, date_from, date_to } = req.query;
 
     let query = `
       SELECT 
@@ -93,9 +93,14 @@ router.get('/bookings', async (req, res) => {
       query += ` AND LOWER(g.email) LIKE LOWER($${params.length})`;
     }
 
-    if (date) {
-      params.push(date);
-      query += ` AND (r.check_in_date = $${params.length} OR r.check_out_date = $${params.length})`;
+    if (date_from) {
+      params.push(date_from);
+      query += ` AND r.check_in_date >= $${params.length}`;
+    }
+
+    if (date_to) {
+      params.push(date_to);
+      query += ` AND r.check_out_date <= $${params.length}`;
     }
 
     query += ` ORDER BY r.created_at DESC`;

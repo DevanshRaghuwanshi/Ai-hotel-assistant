@@ -20,31 +20,46 @@ groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 def rag_chat():
     data = request.json
     question = data.get('message')
-
+    hotel_id = data.get('hotel_id')
+    print(f"RAG request - hotel_id: {hotel_id}")
+    
+    # List all collections
+    all_collections = client.list_collections()
+    print(f"Available collections: {[c.name for c in all_collections]}")
     if not question:
         return jsonify({'error': 'Message required'}), 400
 
-    # Step 1 - convert question to embedding
+    # Use hotel-specific collection if exists, fallback to default
+    collection_name = f"hotel_{hotel_id}_docs" if hotel_id else "hotel_docs"
+    
+    try:
+        hotel_collection = client.get_collection(collection_name)
+    except:
+        # Fallback to default collection
+        try:
+            hotel_collection = client.get_collection("hotel_docs")
+        except:
+            return jsonify({'reply': "I don't have any hotel information yet. Please ask the hotel to upload their documents.", 'source_chunks': []})
+
+    # Convert question to embedding
     question_embedding = model.encode(question).tolist()
 
-    # Step 2 - search ChromaDB for relevant chunks
-    results = collection.query(
+    # Search collection
+    results = hotel_collection.query(
         query_embeddings=[question_embedding],
         n_results=2
     )
 
-    # Step 3 - build context from retrieved chunks
     context = "\n\n".join(results['documents'][0])
 
-    # Step 4 - send to Groq with context
     response = groq_client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="llama-3.3-70b-versatile",
         messages=[
             {
                 "role": "system",
-                "content": f"""You are a helpful assistant for The Grand Hotel.
+                "content": f"""You are a helpful assistant for this hotel.
 Answer the guest's question using ONLY the context provided below.
-If the answer is not in the context, say 'I don't have that information, please contact our front desk at +91-22-1234-5678.'
+If the answer is not in the context, say 'I don't have that information, please contact our front desk.'
 
 CONTEXT:
 {context}"""

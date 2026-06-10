@@ -1,41 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const Groq = require('groq-sdk');
+const fetch = require('node-fetch');
 require('dotenv').config();
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const SYSTEM_PROMPT = `You are a helpful assistant for The Grand Hotel,
-a 4-star hotel in Mumbai, India.
-
-Hotel Policies:
-- Check-in time: 2:00 PM
-- Check-out time: 11:00 AM
-- Pets allowed with ₹500 refundable deposit
-- Free breakfast included for all guests (7AM - 10AM)
-- Rooftop pool open 6AM - 10PM
-- Free WiFi throughout the property
-- Cancellation is free up to 48 hours before check-in
-- Airport pickup available for ₹800 (book 24hr in advance)
-
-Always be polite, warm, and concise.`;
 
 router.post('/', async (req, res) => {
   const { message } = req.body;
+  const hotel_id = req.hotel?.hotel_id;
+  console.log('Chat hotel_id:', hotel_id);
+
   if (!message) return res.status(400).json({ error: 'Message required' });
 
   try {
-    const response = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: message }
-      ],
-      max_tokens: 1024,
+    const ragRes = await fetch('http://127.0.0.1:5001/rag-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, hotel_id })
     });
-    res.json({ reply: response.choices[0].message.content });
+
+    const data = await ragRes.json();
+    res.json({ reply: data.reply });
   } catch (error) {
-    console.error('Chat error:', error.message);
+    console.error('RAG error:', error.message);
     res.status(500).json({ error: 'Something went wrong' });
   }
 });

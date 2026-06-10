@@ -10,9 +10,9 @@ const authenticateHotel = require('./middleware/auth');
 
 app.use('/payment', authenticateHotel, require('./routes/payment'));
 app.use('/documents', authenticateHotel, require('./routes/documents'));
-app.use('/chat', require('./routes/chat'));
+app.use('/chat', authenticateHotel, require('./routes/chat'));
 app.use('/rooms', authenticateHotel, require('./routes/rooms'));
-app.use('/agent', require('./routes/agent'));
+app.use('/agent', authenticateHotel, require('./routes/agent'));
 app.use('/auth', require('./routes/auth'));
 
 const PORT = process.env.PORT || 5000;

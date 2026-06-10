@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-
+const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
 export default function StaffDashboard() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,7 @@ const res = await fetch("http://localhost:5000/rooms/all", {
             Staff Dashboard
           </h1>
           <p style={{ color: "#888", fontSize: "13px", margin: "4px 0 0" }}>
-            The Grand Hotel — Room Status
+            {hotel.hotel_name || "Hotel"} — Room Status
           </p>
         </div>
         <button
@@ -58,9 +58,6 @@ const res = await fetch("http://localhost:5000/rooms/all", {
         >
           Refresh
         </button>
-<Link to="/bookings" style={{ padding: "8px 16px", background: "#f9f9f9", color: "#1a1a1a", border: "1px solid #e5e5e5", borderRadius: "8px", cursor: "pointer", fontSize: "13px", textDecoration: "none" }}>
-  Booking History
-</Link>
       </div>
 
       {/* Stats */}
@@ -158,13 +155,6 @@ const res = await fetch("http://localhost:5000/rooms/all", {
           ))}
         </div>
       )}
-
-      {/* Back to chatbot */}
-      <div style={{ marginTop: "24px", textAlign: "center" }}>
-<Link to="/" style={{ color: "#888", fontSize: "13px", textDecoration: "none" }}>
-  ← Back to PMS
-</Link>
-      </div>
     </div>
   );
 }

@@ -10,11 +10,18 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 async function executeTool(toolName, toolArgs) {
   console.log(`Executing tool: ${toolName}`, toolArgs);
 
-  if (toolName === 'check_room_availability') {
-    const result = await pool.query(
-      "SELECT * FROM rooms WHERE LOWER(room_type) = LOWER($1) AND status = 'available'",
-      [toolArgs.room_type]
-    );
+if (toolName === 'check_room_availability') {
+    const result = await pool.query(`
+      SELECT r.* FROM rooms r
+      WHERE LOWER(r.room_type) = LOWER($1)
+      AND r.hotel_id = $2
+      AND r.id NOT IN (
+        SELECT room_id FROM reservations 
+        WHERE status = 'confirmed'
+        AND check_in_date <= CURRENT_DATE 
+        AND check_out_date > CURRENT_DATE
+      )
+    `, [toolArgs.room_type, toolArgs.hotel_id]);
     if (result.rows.length === 0) {
       return { available: false, message: `No ${toolArgs.room_type} rooms available` };
     }
@@ -51,11 +58,18 @@ async function executeTool(toolName, toolArgs) {
     return { success: false, message: 'A reservation already exists for this guest on this date' };
   }
     // Find available room of requested type
-    const roomResult = await pool.query(
-      "SELECT * FROM rooms WHERE LOWER(room_type) = LOWER($1) AND status = 'available' LIMIT 1",
-      [toolArgs.room_type]
-    );
-
+const roomResult = await pool.query(`
+      SELECT * FROM rooms r
+      WHERE LOWER(r.room_type) = LOWER($1)
+      AND r.hotel_id = $2
+      AND r.id NOT IN (
+        SELECT room_id FROM reservations 
+        WHERE status = 'confirmed'
+        AND check_in_date <= CURRENT_DATE 
+        AND check_out_date > CURRENT_DATE
+      )
+      LIMIT 1
+    `, [toolArgs.room_type, toolArgs.hotel_id]);
     if (roomResult.rows.length === 0) {
       return { success: false, message: 'No rooms available for this type' };
     }
@@ -146,7 +160,7 @@ When a guest wants to book a room, collect these details one by one:
 - check_out_date (YYYY-MM-DD)
 - num_guests (number)
 
-When you have ALL details, respond with ONLY this JSON and nothing else:
+When you have ALL details confirmed by the guest, respond with ONLY this JSON and absolutely nothing else before or after it:
 {"action": "create_reservation", "full_name": "...", "email": "...", "phone": "...", "id_proof_type": "...", "id_proof_number": "...", "room_type": "...", "check_in_date": "...", "check_out_date": "...", "num_guests": 1}
 
 For availability questions respond with:
@@ -154,6 +168,9 @@ For availability questions respond with:
 
 For looking up bookings respond with:
 {"action": "get_reservation", "email": "..."}
+- NEVER show the JSON to the guest
+- NEVER ask the guest to confirm the JSON
+- Just output the raw JSON silently when ready to book
 - NEVER call create_reservation if full_name is empty or missing
 - NEVER call create_reservation twice for the same guest
 
@@ -179,6 +196,7 @@ For general questions just answer normally in plain text.`;
     if (parsed.action === 'create_reservation') {
       parsed.num_guests = parseInt(parsed.num_guests);
       parsed.hotel_id = hotel_id;
+        console.log('hotel_id being set:', hotel_id);
       const result = await executeTool('create_reservation', parsed);
       if (result.success) {
         return {
@@ -192,7 +210,7 @@ For general questions just answer normally in plain text.`;
     }
 
     if (parsed.action === 'check_availability') {
-      const result = await executeTool('check_room_availability', { room_type: parsed.room_type });
+      const result = await executeTool('check_room_availability', { room_type: parsed.room_type, hotel_id: hotel_id });
       if (result.available) {
         const roomList = result.rooms.map(r => `Room ${r.room_number} - ₹${r.price_per_night}/night`).join('\n');
         return { reply: `We have ${result.count} ${parsed.room_type} room(s) available:\n${roomList}` };

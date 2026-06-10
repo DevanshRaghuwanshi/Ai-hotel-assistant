@@ -103,7 +103,6 @@ export default function Admin() {
           <div style={{ color: "#fff", fontSize: "18px", fontWeight: "700" }}>Admin Panel</div>
           <div style={{ color: "#888", fontSize: "12px" }}>{hotel.hotel_name}</div>
         </div>
-        <Link to="/" style={{ color: "#888", fontSize: "13px", textDecoration: "none" }}>← Back to PMS</Link>
       </div>
 
       <div style={{ maxWidth: "900px", margin: "40px auto", padding: "0 24px" }}>
