@@ -12,11 +12,20 @@ export default function Admin() {
   const navigate = useNavigate();
   const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
   const token = localStorage.getItem('token');
-
+  const [plan, setPlan] = useState('starter');
   useEffect(() => {
     fetchRooms();
+    fetchPlan();
   }, []);
-
+const fetchPlan = async () => {
+  try {
+    const res = await fetch('http://localhost:5000/payment/plan', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    setPlan(data.plan);
+  } catch (e) {}
+};
   const fetchRooms = async () => {
     try {
       const res = await fetch('http://localhost:5000/rooms/available', {
@@ -255,17 +264,35 @@ export default function Admin() {
                 </div>
               ))}
             </div>
-
-            {/* Embed Code */}
-            <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1a1a1a", margin: "24px 0 16px" }}>Your Chatbot Embed Code</h2>
-            <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px" }}>
-              <div style={{ fontSize: "12px", color: "#888", marginBottom: "8px" }}>Add this to your hotel website:</div>
-              <code style={{ color: "#86efac", fontSize: "12px", lineHeight: "1.6" }}>
-                {`<script src="https://yourpms.com/widget.js?hotel_id=${hotel.id}"></script>`}
-              </code>
-            </div>
           </div>
         )}
+        {/* Embed Code - Pro only */}
+{activeTab === 'profile' && (
+  <div style={{ marginTop: "24px" }}>
+    <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1a1a1a", marginBottom: "16px" }}>
+      Your Chatbot Embed Code
+    </h2>
+    {plan === 'professional' || plan === 'enterprise' ? (
+      <div style={{ background: "#1a1a1a", borderRadius: "12px", padding: "20px" }}>
+        <div style={{ fontSize: "12px", color: "#888", marginBottom: "8px" }}>Add this to your hotel website:</div>
+        <code style={{ color: "#86efac", fontSize: "12px" }}>
+          {`<script src="https://yourpms.com/widget.js?hotel_id=${hotel.id}"></script>`}
+        </code>
+      </div>
+    ) : (
+      <div style={{ background: "#fef9c3", border: "1px solid #fde047", borderRadius: "12px", padding: "20px", textAlign: "center" }}>
+        <div style={{ fontSize: "24px", marginBottom: "8px" }}>🔒</div>
+        <div style={{ fontSize: "15px", fontWeight: "600", color: "#854d0e", marginBottom: "6px" }}>Pro Feature</div>
+        <div style={{ fontSize: "13px", color: "#92400e", marginBottom: "16px" }}>
+          Embed code is available on the Professional plan.
+        </div>
+        <a href="/pricing" style={{ padding: "8px 20px", background: "#c9a96e", color: "#fff", borderRadius: "8px", fontSize: "13px", fontWeight: "600", textDecoration: "none" }}>
+          Upgrade to Pro →
+        </a>
+      </div>
+    )}
+  </div>
+)}
 
       </div>
     </div>

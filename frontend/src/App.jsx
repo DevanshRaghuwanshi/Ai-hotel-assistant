@@ -61,6 +61,15 @@ const sendMessage = async (text) => {
 
     const res = await fetch(endpoint, { method: 'POST', headers, body });
     const data = await res.json();
+        // Handle upgrade required
+    if (res.status === 403 && data.error === 'upgrade_required') {
+      setMessages(m => [...m, { 
+        role: 'bot', 
+        text: '🔒 AI Concierge requires a Professional plan. Please upgrade at /pricing to unlock this feature.' 
+      }]);
+      setLoading(false);
+      return;
+    }
     setMessages(m => [...m, { role: 'bot', text: data.reply }]);
   } catch {
     setMessages(m => [...m, { role: 'bot', text: 'Network error. Are both servers running?' }]);

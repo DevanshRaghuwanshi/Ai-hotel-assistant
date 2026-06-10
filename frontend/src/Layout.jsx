@@ -35,6 +35,7 @@ const menuItems = [
       { path: "/staff", icon: "🏨", label: "Stay View" },
       { path: "/bookings", icon: "📋", label: "Reservations" },
       { path: "/admin", icon: "⚙️", label: "Manage Hotel" },
+      { path: "/reservations/new", icon: "➕", label: "New Reservation" },
     ]
   },
   {

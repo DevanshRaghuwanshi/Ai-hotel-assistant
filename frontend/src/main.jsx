@@ -10,6 +10,7 @@ import Admin from './Admin.jsx'
 import Pricing from './Pricing.jsx'
 import Auth from './Auth.jsx'
 import Layout from './Layout.jsx'
+import ManualReservation from './ManualReservation.jsx'
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem('token');
@@ -35,6 +36,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/bookings" element={<ProtectedLayout><BookingHistory /></ProtectedLayout>} />
         <Route path="/admin" element={<ProtectedLayout><Admin /></ProtectedLayout>} />
         <Route path="/pricing" element={<ProtectedLayout><Pricing /></ProtectedLayout>} />
+        <Route path="/reservations/new" element={<ProtectedLayout><ManualReservation /></ProtectedLayout>} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
