@@ -1,7 +1,30 @@
 import { useState, useEffect } from "react";
-import { Link ,useNavigate} from "react-router-dom";
+import { Link } from "react-router-dom";
 
-const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+  .pms-page { font-family: 'DM Sans', sans-serif; }
+  .pms-card { background: #fff; border: 1px solid #ebebeb; border-radius: 12px; transition: box-shadow 0.2s; }
+  .pms-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+  .nav-card { text-decoration: none; display: block; }
+  .nav-card-inner { background: #fff; border: 1px solid #ebebeb; border-radius: 12px; padding: 28px 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
+  .nav-card-inner:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.08); transform: translateY(-2px); border-color: #c9a96e; }
+`;
+
+function StatCard({ label, value, color, icon }) {
+  return (
+    <div style={{ background: "#fff", border: "1px solid #ebebeb", borderRadius: "12px", padding: "24px", display: "flex", alignItems: "center", gap: "16px" }}>
+      <div style={{ width: "48px", height: "48px", borderRadius: "10px", background: color + '15', display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: "28px", fontWeight: "700", color: color, fontFamily: "'Playfair Display', serif" }}>{value}</div>
+        <div style={{ fontSize: "12px", color: "#888", marginTop: "2px" }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
 function QuickStats() {
   const [stats, setStats] = useState({ total: 0, available: 0, occupied: 0, bookings: 0 });
 
@@ -9,19 +32,18 @@ function QuickStats() {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
-const headers = { 'Authorization': `Bearer ${token}` };
-
-const [roomsRes, bookingsRes] = await Promise.all([
-  fetch("http://localhost:5000/rooms/all", { headers }),
-  fetch("http://localhost:5000/rooms/bookings", { headers })
-]);
+        const headers = { 'Authorization': `Bearer ${token}` };
+        const [roomsRes, bookingsRes] = await Promise.all([
+          fetch("http://localhost:5000/rooms/all", { headers }),
+          fetch("http://localhost:5000/rooms/bookings", { headers })
+        ]);
         const roomsData = await roomsRes.json();
         const bookingsData = await bookingsRes.json();
         setStats({
-          total: roomsData.rooms.length,
-          available: roomsData.rooms.filter(r => r.status === 'available').length,
-          occupied: roomsData.rooms.filter(r => r.status === 'occupied').length,
-          bookings: bookingsData.bookings.length
+          total: roomsData.rooms?.length || 0,
+          available: roomsData.rooms?.filter(r => r.status === 'available').length || 0,
+          occupied: roomsData.rooms?.filter(r => r.status === 'occupied').length || 0,
+          bookings: bookingsData.bookings?.length || 0
         });
       } catch (e) {}
     };
@@ -29,86 +51,61 @@ const [roomsRes, bookingsRes] = await Promise.all([
   }, []);
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginTop: "32px" }}>
-      {[
-        { label: "Total Rooms", value: stats.total, color: "#1a1a1a" },
-        { label: "Available Now", value: stats.available, color: "#16a34a" },
-        { label: "Occupied", value: stats.occupied, color: "#dc2626" },
-        { label: "Total Bookings", value: stats.bookings, color: "#0f3460" },
-      ].map(s => (
-        <div key={s.label} style={{ background: "#fff", border: "1px solid #e5e5e5", borderRadius: "12px", padding: "16px", textAlign: "center" }}>
-          <div style={{ fontSize: "28px", fontWeight: "700", color: s.color }}>{s.value}</div>
-          <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>{s.label}</div>
-        </div>
-      ))}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "32px" }}>
+      <StatCard label="Total Rooms" value={stats.total} color="#1a1a1a" icon="🏠" />
+      <StatCard label="Available Now" value={stats.available} color="#16a34a" icon="✓" />
+      <StatCard label="Occupied" value={stats.occupied} color="#dc2626" icon="👤" />
+      <StatCard label="Total Bookings" value={stats.bookings} color="#c9a96e" icon="📋" />
     </div>
   );
 }
 
 export default function PMS() {
-    const navigate = useNavigate();
   const hotel = JSON.parse(localStorage.getItem('hotel') || '{}');
+  const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('hotel');
-    navigate('/login');
-  };
   return (
-    <div style={{ fontFamily: "sans-serif", minHeight: "100vh", background: "#f8f9fa" }}>
+    <div className="pms-page" style={{ padding: "32px 40px", minHeight: "100vh", background: "#f4f4f2" }}>
+      <style>{css}</style>
 
       {/* Header */}
-      <div style={{ background: "#1a1a1a", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <div style={{ color: "#fff", fontSize: "20px", fontWeight: "700" }}>{hotel.hotel_name || "Hotel"}</div>
-          <div style={{ color: "#888", fontSize: "12px", marginTop: "2px" }}>Property Management System</div>
-        </div>
-<div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ color: "#888", fontSize: "12px" }}>
-            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
-        </div>
+      <div style={{ marginBottom: "32px" }}>
+        <div style={{ fontSize: "11px", color: "#c9a96e", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "6px" }}>{today}</div>
+        <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "32px", fontWeight: "700", color: "#1a1a1a", margin: "0 0 4px" }}>
+          Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'} 👋
+        </h1>
+        <p style={{ color: "#888", fontSize: "14px", margin: 0 }}>
+          Here's what's happening at <strong style={{ color: "#1a1a1a" }}>{hotel.hotel_name}</strong> today.
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div style={{ maxWidth: "900px", margin: "60px auto", padding: "0 24px" }}>
+      {/* Stats */}
+      <QuickStats />
 
-        <div style={{ textAlign: "center", marginBottom: "48px" }}>
-          <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#1a1a1a", margin: "0 0 8px" }}>
-            Welcome to {hotel.hotel_name || "Hotel"} PMS
-          </h1>
-          <p style={{ color: "#888", fontSize: "15px", margin: 0 }}>
-            Manage your property with AI-powered tools
-          </p>
-        </div>
-
-        {/* 3 Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
+      {/* Nav Cards */}
+      <div style={{ marginBottom: "12px" }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: "700", color: "#1a1a1a", marginBottom: "16px" }}>Quick Access</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
           {[
-            { href: "/chat", emoji: "🤖", title: "AI Concierge", desc: "Guest chatbot powered by AI. Answers questions, handles bookings, checks availability.", btn: "Open Chatbot" },
-            { href: "/staff", emoji: "🏨", title: "Staff Dashboard", desc: "Real-time room status. See available, occupied rooms and upcoming bookings at a glance.", btn: "View Rooms" },
-            { href: "/bookings", emoji: "📋", title: "Booking History", desc: "View all reservations. Filter by guest name, email, or date. Track booking status.", btn: "View Bookings" },
-            { href: "/admin", emoji: "⚙️", title: "Admin Panel", desc: "Manage rooms, upload documents, view your embed code.", btn: "Open Admin" },
-            { href: "/pricing", emoji: "💳", title: "Upgrade Plan", desc: "View your current plan and upgrade to unlock more features.", btn: "View Plans" },
+            { href: "/chat", emoji: "🤖", title: "AI Concierge", desc: "Chat with guests, handle bookings, answer questions — all powered by AI.", btn: "Open Chat", color: "#6366f1" },
+            { href: "/staff", emoji: "🏨", title: "Stay View", desc: "Real-time room status with guest info and upcoming booking alerts.", btn: "View Rooms", color: "#16a34a" },
+            { href: "/bookings", emoji: "📋", title: "Reservations", desc: "All bookings in one place. Filter by guest, date range, or status.", btn: "View Bookings", color: "#c9a96e" },
+            { href: "/admin", emoji: "⚙️", title: "Manage Hotel", desc: "Add rooms, upload documents, manage your hotel profile.", btn: "Open Admin", color: "#0f3460" },
+            { href: "/pricing", emoji: "💳", title: "Upgrade Plan", desc: "Unlock more features. View your current plan and billing.", btn: "View Plans", color: "#dc2626" },
+            { href: "/chat", emoji: "📊", title: "Today's Summary", desc: "Ask the AI: 'How many rooms are available today?' or 'Show today's bookings'.", btn: "Ask AI", color: "#888" },
           ].map(card => (
-            <Link key={card.href} to={card.href} style={{ textDecoration: "none" }}>
-              <div
-                style={{ background: "#fff", border: "1px solid #e5e5e5", borderRadius: "16px", padding: "32px 24px", textAlign: "center", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}
-                onMouseEnter={e => e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.1)"}
-                onMouseLeave={e => e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)"}
-              >
-                <div style={{ fontSize: "48px", marginBottom: "16px" }}>{card.emoji}</div>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "#1a1a1a", marginBottom: "8px" }}>{card.title}</div>
-                <div style={{ fontSize: "13px", color: "#888", lineHeight: "1.5" }}>{card.desc}</div>
-                <div style={{ marginTop: "20px", padding: "8px 20px", background: "#1a1a1a", color: "#fff", borderRadius: "8px", fontSize: "13px", display: "inline-block" }}>
+            <Link key={card.href + card.title} to={card.href} className="nav-card">
+              <div className="nav-card-inner">
+                <div style={{ fontSize: "36px", marginBottom: "12px" }}>{card.emoji}</div>
+                <div style={{ fontSize: "15px", fontWeight: "700", color: "#1a1a1a", marginBottom: "6px", fontFamily: "'Playfair Display', serif" }}>{card.title}</div>
+                <div style={{ fontSize: "12px", color: "#888", lineHeight: "1.5", marginBottom: "16px" }}>{card.desc}</div>
+                <div style={{ padding: "7px 16px", background: card.color + '15', color: card.color, borderRadius: "6px", fontSize: "12px", fontWeight: "600", display: "inline-block" }}>
                   {card.btn} →
                 </div>
               </div>
             </Link>
           ))}
         </div>
-
-        <QuickStats />
       </div>
     </div>
   );
