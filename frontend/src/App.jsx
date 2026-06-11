@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
+//styles
 const styles = {
   app: { maxWidth: '600px', margin: '0 auto', padding: '20px', fontFamily: 'sans-serif' },
   header: { textAlign: 'center', marginBottom: '24px' },
